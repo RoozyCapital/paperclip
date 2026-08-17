@@ -1,17 +1,143 @@
 name: Deploy
 
 on:
-  workflow_run:
-    workflows: ["Docker"]
-    types:
-      - completed
+  push:
     branches:
       - master
 
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Compute build version
+        id: build-version
+        run: |
+          set -euo pipefail
+          version="$(git describe --tags --match 'v*' --long --dirty 2>/dev/null || true)"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "Stamping build version: ${version:-<none>}"
+
+      - name: Compute tool cache epoch
+        id: tools-epoch
+        run: echo "epoch=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.4
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 20
+
+      - name: Refresh lockfile for Docker build context
+        run: |
+          set -euo pipefail
+          pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile
+
+          changed="$(git status --porcelain)"
+          if [ -z "$changed" ]; then
+            echo "Lockfile already matches package metadata."
+            exit 0
+          fi
+
+          if printf '%s\n' "$changed" | grep -Fvq ' pnpm-lock.yaml'; then
+            echo "Unexpected files changed during lockfile refresh:"
+            echo "$changed"
+            exit 1
+          fi
+
+          echo "Using refreshed pnpm-lock.yaml in the Docker build context."
+
+      - name: Free runner disk
+        run: |
+          set -euo pipefail
+          echo "Disk before cleanup:"
+          df -h
+
+          pnpm store prune || true
+          sudo apt-get clean || true
+          sudo rm -rf \
+            /usr/share/dotnet \
+            /usr/share/swift \
+            /usr/local/lib/android \
+            /usr/local/share/boost \
+            /usr/local/share/powershell \
+            /opt/ghc \
+            /opt/hostedtoolcache/CodeQL \
+            /opt/hostedtoolcache/PyPy \
+            /opt/hostedtoolcache/Ruby || true
+          docker system prune -af || true
+
+          echo "Disk after cleanup:"
+          df -h
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Compute schema migration labels
+        id: schema
+        run: |
+          set -euo pipefail
+          last=$(ls packages/db/src/migrations/*.sql | sed 's|.*/||' | LC_ALL=C sort | tail -1)
+          count=$(ls packages/db/src/migrations/*.sql | wc -l | tr -d ' ')
+          echo "last=${last}" >> "$GITHUB_OUTPUT"
+          echo "count=${count}" >> "$GITHUB_OUTPUT"
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=canary,enable=${{ github.ref == 'refs/heads/master' }}
+            type=sha
+          labels: |
+            io.github.paperclipai.schema.last-migration=${{ steps.schema.outputs.last }}
+            io.github.paperclipai.schema.migration-count=${{ steps.schema.outputs.count }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: production
+          build-args: |
+            PAPERCLIP_BUILD_VERSION=${{ steps.build-version.outputs.version }}
+            PAPERCLIP_BUILD_COMMIT=${{ github.sha }}
+            CLI_TOOLS_CACHE_EPOCH=${{ steps.tools-epoch.outputs.epoch }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache,mode=max
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    needs: [build-and-push]
 
     steps:
       - name: Deploy to VPS container
@@ -34,12 +160,16 @@ jobs:
             docker stop paperclip || true
             docker rm paperclip || true
 
+            # Load environment variables on the VPS host (e.g., if DATABASE_URL is defined in profiles)
+            [ -f ~/.profile ] && . ~/.profile || true
+            [ -f /etc/profile ] && . /etc/profile || true
+
             # Run the new container with DB configuration and auto-migration
             docker run -d \
               --name paperclip \
               --restart unless-stopped \
               -p 3100:3100 \
-              -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+              -e DATABASE_URL="$DATABASE_URL" \
               -e PAPERCLIP_MIGRATION_AUTO_APPLY="true" \
               -v paperclip-data:/paperclip \
               ghcr.io/${{ github.repository }}:canary
