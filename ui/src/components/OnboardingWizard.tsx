@@ -41,6 +41,7 @@ import {
   selectReusableOnboardingProject,
 } from "../lib/onboarding-launch";
 import { buildNewAgentRuntimeConfig } from "../lib/new-agent-runtime-config";
+import { DEFAULT_ANTIGRAVITY_LOCAL_MODEL } from "@paperclipai/adapter-antigravity-local";
 import { DEFAULT_CODEX_LOCAL_BYPASS_APPROVALS_AND_SANDBOX } from "@paperclipai/adapter-codex-local";
 import { DEFAULT_CURSOR_LOCAL_MODEL } from "@paperclipai/adapter-cursor-local";
 import { DEFAULT_GEMINI_LOCAL_MODEL } from "@paperclipai/adapter-gemini-local";
@@ -655,6 +656,7 @@ function OnboardingWizardInner({
     adapterCaps.supportsLocalAgentJwt;
   const isLocalAdapter =
     isLocalAdapterCaps ||
+    adapterType === "antigravity_local" ||
     adapterType === "claude_local" ||
     adapterType === "codex_local" ||
     adapterType === "gemini_local" ||
@@ -697,6 +699,10 @@ function OnboardingWizardInner({
     if (visible.some((a) => a.type === adapterType)) return;
     const next = visible[0].type as AdapterType;
     setAdapterType(next);
+    if (next === "antigravity_local") {
+      setModel(DEFAULT_ANTIGRAVITY_LOCAL_MODEL);
+      return;
+    }
     if (next === "codex_local") return;
     if (next === "opencode_local") {
       setModel(DEFAULT_OPENCODE_LOCAL_MODEL);
@@ -714,6 +720,7 @@ function OnboardingWizardInner({
   }, [adapterRegistryLoaded, recommendedAdapters, moreAdapters, adapterType]);
 
   const COMMAND_PLACEHOLDERS: Record<string, string> = {
+    antigravity_local: "agy",
     claude_local: "claude",
     codex_local: "codex",
     gemini_local: "gemini",
@@ -1859,6 +1866,10 @@ function OnboardingWizardInner({
                                if (opt.comingSoon) return;
                                const nextType = opt.type;
                               setAdapterType(nextType);
+                              if (nextType === "antigravity_local" && !model) {
+                                setModel(DEFAULT_ANTIGRAVITY_LOCAL_MODEL);
+                                return;
+                              }
                               if (nextType === "gemini_local" && !model) {
                                 setModel(DEFAULT_GEMINI_LOCAL_MODEL);
                                 return;

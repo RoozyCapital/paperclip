@@ -574,8 +574,9 @@ async function resolveBuiltInAgentCommand(input: {
   executionTargetIsRemote: boolean;
 }): Promise<BuiltInAgentCommand | null> {
   const { agent, packageRootDir, executionTargetIsRemote } = input;
-  if (agent === "gemini") {
-    return { command: "gemini --acp", shellCommand: "gemini --acp" };
+  if (agent === "gemini" || agent === "antigravity") {
+    const binName = agent === "antigravity" ? "agy" : "gemini";
+    return { command: `${binName} --acp`, shellCommand: `${binName} --acp` };
   }
   const binName = agent === "claude" ? "claude-agent-acp" : agent === "codex" ? "codex-acp" : null;
   if (!binName) return null;
@@ -621,7 +622,8 @@ function geminiAcpCommandTokens(commandShell: string): string[] | null {
   const tokens = commandShell.trim().split(/\s+/);
   const bin = tokens[0];
   if (!bin || bin.startsWith("'") || bin.startsWith('"')) return null;
-  if (path.basename(bin) !== "gemini") return null;
+  const baseName = path.basename(bin);
+  if (baseName !== "gemini" && baseName !== "agy") return null;
   if (!tokens.includes("--acp")) return null;
   return tokens;
 }
@@ -1698,7 +1700,7 @@ async function buildRuntime(input: {
     );
     skillsIdentity = preparedSkills.identity;
     skillCommandNotes.push(...preparedSkills.commandNotes);
-  } else if (acpxAgent === "gemini") {
+  } else if (acpxAgent === "gemini" || acpxAgent === "antigravity") {
     const preparedSkills = await prepareGeminiSkillRuntime({
       config,
       moduleDir: input.engine.moduleDir,
@@ -1725,7 +1727,7 @@ async function buildRuntime(input: {
   });
   let agentCommand = configuredCommand || builtInCommand?.command || null;
   let agentCommandShell = configuredCommand || builtInCommand?.shellCommand || "";
-  if (acpxAgent === "gemini" && agentCommandShell) {
+  if ((acpxAgent === "gemini" || acpxAgent === "antigravity") && agentCommandShell) {
     const normalized = await normalizeGeminiAcpCommandShell(
       agentCommandShell,
       ensurePathInEnv({ ...process.env, ...env }),

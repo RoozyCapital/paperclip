@@ -67,6 +67,12 @@ const adapterDisplayMap: Record<string, AdapterDisplayInfo> = {
     disabledLabel: "Use Claude Code or Codex with the ACP engine",
     hideFromVisualSelection: true,
   },
+  antigravity_local: {
+    label: "Antigravity CLI",
+    description: "Google Antigravity CLI harness",
+    icon: Sparkles,
+    recommended: true,
+  },
   claude_local: {
     label: "Claude Code",
     description: "Claude Code CLI harness",
@@ -83,6 +89,7 @@ const adapterDisplayMap: Record<string, AdapterDisplayInfo> = {
     label: "Gemini CLI",
     description: "Gemini CLI harness",
     icon: Gem,
+    hideFromVisualSelection: true,
   },
   grok_local: {
     label: "Grok Build",

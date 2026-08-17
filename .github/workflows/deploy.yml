@@ -1,0 +1,48 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["Docker"]
+    types:
+      - completed
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Deploy to VPS container
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_SSH_HOST || '43.163.100.49' }}
+          username: ${{ secrets.VPS_SSH_USER || 'root' }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          script: |
+            # Exit immediately if a command exits with a non-zero status
+            set -e
+
+            echo "Starting deployment sequence..."
+
+            # Pull the latest canary image
+            docker pull ghcr.io/${{ github.repository }}:canary
+
+            # Stop and remove the existing container if it exists
+            docker stop paperclip || true
+            docker rm paperclip || true
+
+            # Run the new container with DB configuration and auto-migration
+            docker run -d \
+              --name paperclip \
+              --restart unless-stopped \
+              -p 3100:3100 \
+              -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+              -e PAPERCLIP_MIGRATION_AUTO_APPLY="true" \
+              -v paperclip-data:/paperclip \
+              ghcr.io/${{ github.repository }}:canary
+
+            echo "Deployment completed successfully! Checking container status..."
+            docker ps -f name=paperclip

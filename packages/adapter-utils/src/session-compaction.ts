@@ -37,6 +37,7 @@ const ADAPTER_MANAGED_SESSION_POLICY: SessionCompactionPolicy = {
 };
 
 export const LEGACY_SESSIONED_ADAPTER_TYPES = new Set([
+  "antigravity_local",
   "claude_local",
   "codex_local",
   "cursor_cloud",
@@ -48,6 +49,11 @@ export const LEGACY_SESSIONED_ADAPTER_TYPES = new Set([
 ]);
 
 export const ADAPTER_SESSION_MANAGEMENT: Record<string, AdapterSessionManagement> = {
+  antigravity_local: {
+    supportsSessionResume: true,
+    nativeContextManagement: "unknown",
+    defaultSessionCompaction: DEFAULT_SESSION_COMPACTION_POLICY,
+  },
   claude_local: {
     supportsSessionResume: true,
     nativeContextManagement: "confirmed",

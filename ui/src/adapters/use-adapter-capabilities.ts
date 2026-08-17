@@ -17,6 +17,7 @@ const ALL_FALSE: AdapterCapabilities = {
  * return correct values on first render before the /api/adapters call resolves.
  */
 const KNOWN_DEFAULTS: Record<string, AdapterCapabilities> = {
+  antigravity_local: { supportsInstructionsBundle: true, supportsSkills: true, supportsLocalAgentJwt: true, requiresMaterializedRuntimeSkills: true, supportsModelProfiles: true, supportsAcp: true },
   claude_local: { supportsInstructionsBundle: true, supportsSkills: true, supportsLocalAgentJwt: true, requiresMaterializedRuntimeSkills: false, supportsModelProfiles: true, supportsAcp: true },
   codex_local: { supportsInstructionsBundle: true, supportsSkills: true, supportsLocalAgentJwt: true, requiresMaterializedRuntimeSkills: false, supportsModelProfiles: true, supportsAcp: true },
   cursor: { supportsInstructionsBundle: true, supportsSkills: true, supportsLocalAgentJwt: true, requiresMaterializedRuntimeSkills: true, supportsModelProfiles: true, supportsAcp: false },

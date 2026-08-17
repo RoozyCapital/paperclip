@@ -11,7 +11,7 @@ agent_role: ("ceo" | "cto" | "cmo" | "cfo" | "security" | "engineer" | "designer
 }
 
 export interface PaperclipAgentTaskCompletedDimensions {
-adapter_type: ("process" | "http" | "acpx_local" | "claude_local" | "codex_local" | "cursor_cloud" | "gemini_local" | "hermes_gateway" | "hermes_local" | "opencode_local" | "pi_local" | "cursor" | "openclaw_gateway" | "grok_local" | "other")
+adapter_type: ("process" | "http" | "acpx_local" | "antigravity_local" | "claude_local" | "codex_local" | "cursor_cloud" | "gemini_local" | "hermes_gateway" | "hermes_local" | "opencode_local" | "pi_local" | "cursor" | "openclaw_gateway" | "grok_local" | "other")
 agent_id: string
 agent_role: ("ceo" | "cto" | "cmo" | "cfo" | "security" | "engineer" | "designer" | "pm" | "qa" | "devops" | "researcher" | "general" | "other")
 model?: string
@@ -32,7 +32,7 @@ goal_level: ("company" | "team" | "agent" | "task" | "other")
 }
 
 export interface PaperclipInstallCompletedDimensions {
-adapter_type: ("process" | "http" | "acpx_local" | "claude_local" | "codex_local" | "cursor_cloud" | "gemini_local" | "hermes_gateway" | "hermes_local" | "opencode_local" | "pi_local" | "cursor" | "openclaw_gateway" | "grok_local" | "other")
+adapter_type: ("process" | "http" | "acpx_local" | "antigravity_local" | "claude_local" | "codex_local" | "cursor_cloud" | "gemini_local" | "hermes_gateway" | "hermes_local" | "opencode_local" | "pi_local" | "cursor" | "openclaw_gateway" | "grok_local" | "other")
 }
 
 export interface PaperclipInstallStartedDimensions {
@@ -175,6 +175,7 @@ export const PAPERCLIP_ENUM_DESCRIPTIONS = {
       "process": "Agent runtime uses a local process adapter.",
       "http": "Agent runtime uses a generic HTTP adapter.",
       "acpx_local": "Agent runtime used the retired local ACPX adapter.",
+      "antigravity_local": "Agent runtime uses the local Antigravity adapter.",
       "claude_local": "Agent runtime uses the local Claude adapter.",
       "codex_local": "Agent runtime uses the local Codex adapter.",
       "cursor_cloud": "Agent runtime uses the Cursor cloud adapter.",
@@ -228,6 +229,7 @@ export const PAPERCLIP_ENUM_DESCRIPTIONS = {
       "process": "Agent runtime uses a local process adapter.",
       "http": "Agent runtime uses a generic HTTP adapter.",
       "acpx_local": "Agent runtime used the retired local ACPX adapter.",
+      "antigravity_local": "Agent runtime uses the local Antigravity adapter.",
       "claude_local": "Agent runtime uses the local Claude adapter.",
       "codex_local": "Agent runtime uses the local Codex adapter.",
       "cursor_cloud": "Agent runtime uses the Cursor cloud adapter.",

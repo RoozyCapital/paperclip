@@ -1,4 +1,5 @@
 import type { UIAdapterModule } from "./types";
+import { antigravityLocalUIAdapter } from "./antigravity-local";
 import { claudeLocalUIAdapter } from "./claude-local";
 import { codexLocalUIAdapter } from "./codex-local";
 import { cursorCloudUIAdapter } from "./cursor-cloud";
@@ -52,6 +53,7 @@ setDynamicParserResultNotifier(notifyAdapterChange);
 
 function registerBuiltInUIAdapters() {
   for (const adapter of [
+    antigravityLocalUIAdapter,
     claudeLocalUIAdapter,
     codexLocalUIAdapter,
     cursorCloudUIAdapter,

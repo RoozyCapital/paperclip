@@ -1,4 +1,8 @@
 import { describe, expect, it } from "vitest";
+import {
+  sessionCodec as antigravitySessionCodec,
+  isAntigravitySessionUnrecoverableError,
+} from "@paperclipai/adapter-antigravity-local/server";
 import { sessionCodec as claudeSessionCodec } from "@paperclipai/adapter-claude-local/server";
 import { sessionCodec as codexSessionCodec, isCodexUnknownSessionError } from "@paperclipai/adapter-codex-local/server";
 import {
@@ -16,6 +20,23 @@ import {
 import { sessionCodec as acpxSessionCodec } from "@paperclipai/adapter-utils/acpx-engine/session-codec";
 
 describe("adapter session codecs", () => {
+  it("normalizes antigravity session params with cwd", () => {
+    const parsed = antigravitySessionCodec.deserialize({
+      session_id: "agy-session-1",
+      cwd: "/tmp/antigravity",
+    });
+    expect(parsed).toEqual({
+      sessionId: "agy-session-1",
+      cwd: "/tmp/antigravity",
+    });
+
+    const serialized = antigravitySessionCodec.serialize(parsed);
+    expect(serialized).toEqual({
+      sessionId: "agy-session-1",
+      cwd: "/tmp/antigravity",
+    });
+    expect(antigravitySessionCodec.getDisplayId?.(serialized ?? null)).toBe("agy-session-1");
+  });
   it("normalizes claude session params with cwd", () => {
     const parsed = claudeSessionCodec.deserialize({
       session_id: "claude-session-1",

@@ -126,6 +126,7 @@ import {
   createProductionLoginSessionRuntime,
 } from "../services/codex-device-login-service.js";
 import type { AdapterAuthSessionOwnerResponse } from "@paperclipai/shared";
+import { DEFAULT_ANTIGRAVITY_LOCAL_MODEL } from "@paperclipai/adapter-antigravity-local";
 import { DEFAULT_CURSOR_LOCAL_MODEL } from "@paperclipai/adapter-cursor-local";
 import { DEFAULT_GEMINI_LOCAL_MODEL } from "@paperclipai/adapter-gemini-local";
 import { DEFAULT_OPENCODE_LOCAL_MODEL } from "@paperclipai/adapter-opencode-local";
@@ -1689,6 +1690,10 @@ export function agentRoutes(
       if (!hasBypassFlag) {
         next.dangerouslyBypassApprovalsAndSandbox = DEFAULT_CODEX_LOCAL_BYPASS_APPROVALS_AND_SANDBOX;
       }
+      return ensureGatewayDeviceKey(adapterType, next);
+    }
+    if (adapterType === "antigravity_local" && !asNonEmptyString(next.model)) {
+      next.model = DEFAULT_ANTIGRAVITY_LOCAL_MODEL;
       return ensureGatewayDeviceKey(adapterType, next);
     }
     if (adapterType === "gemini_local" && !asNonEmptyString(next.model)) {
