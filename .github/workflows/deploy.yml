@@ -140,6 +140,19 @@ jobs:
     needs: [build-and-push]
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Copy docker-compose to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_SSH_HOST || '43.163.100.49' }}
+          username: ${{ secrets.VPS_SSH_USER || 'root' }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          source: "docker-compose.production.yml"
+          target: "/opt/paperclip"
+
       - name: Deploy to VPS container
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -160,75 +173,23 @@ jobs:
             # Pull the latest canary image
             docker pull ghcr.io/${{ github.repository }}:canary
 
-            # Copy docker-compose file from repo if not exists, or update it
-            if [ ! -f docker-compose.production.yml ]; then
-              # First time setup - create docker-compose file
-              cat > docker-compose.production.yml << 'COMPOSE_EOF'
-version: "3.8"
-
-services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: paperclip-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: paperclip
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: paperclip
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "127.0.0.1:5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U paperclip"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  paperclip:
-    image: ghcr.io/${{ github.repository }}:canary
-    container_name: paperclip-app
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-    ports:
-      - "3100:3100"
-    environment:
-      DATABASE_URL: postgres://paperclip:${POSTGRES_PASSWORD}@postgres:5432/paperclip
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-      BETTER_AUTH_URL: http://${VPS_IP}:3100
-      PAPERCLIP_AUTH_PUBLIC_BASE_URL: http://${VPS_IP}:3100
-      PAPERCLIP_DEPLOYMENT_MODE: authenticated
-      PAPERCLIP_DEPLOYMENT_EXPOSURE: public
-      PAPERCLIP_MIGRATION_AUTO_APPLY: "true"
-      PORT: 3100
-      HOST: 0.0.0.0
-      SERVE_UI: "true"
-    volumes:
-      - paperclip_data:/paperclip
-
-volumes:
-  postgres_data:
-    driver: local
-  paperclip_data:
-    driver: local
-COMPOSE_EOF
-            fi
-
             # Generate secrets if .env doesn't exist
             if [ ! -f .env ]; then
               POSTGRES_PASSWORD=$(openssl rand -base64 24)
               BETTER_AUTH_SECRET=$(openssl rand -base64 32)
               VPS_IP=$(curl -s ifconfig.me)
               
-              cat > .env << ENV_EOF
-POSTGRES_PASSWORD=$POSTGRES_PASSWORD
-BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET
-VPS_IP=$VPS_IP
-ENV_EOF
+              echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" > .env
+              echo "BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET" >> .env
+              echo "VPS_IP=$VPS_IP" >> .env
+              echo "GITHUB_REPO=${{ github.repository }}" >> .env
               
               echo "Created new .env file with generated secrets"
+            else
+              # If .env exists, ensure GITHUB_REPO is set correctly
+              if ! grep -q "^GITHUB_REPO=" .env; then
+                echo "GITHUB_REPO=${{ github.repository }}" >> .env
+              fi
             fi
 
             # Source .env file
