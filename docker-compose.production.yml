@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: paperclip-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: paperclip
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-paperclip_secret_2024}
+      POSTGRES_DB: paperclip
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"  # Hanya localhost, tidak exposed ke internet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paperclip"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  paperclip:
+    image: ghcr.io/${GITHUB_REPO}:canary
+    container_name: paperclip-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3100:3100"
+    environment:
+      # Database
+      DATABASE_URL: postgres://paperclip:${POSTGRES_PASSWORD:-paperclip_secret_2024}@postgres:5432/paperclip
+      
+      # Authentication - WAJIB untuk public mode
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: http://${VPS_IP}:3100
+      PAPERCLIP_AUTH_PUBLIC_BASE_URL: http://${VPS_IP}:3100
+      
+      # Deployment mode
+      PAPERCLIP_DEPLOYMENT_MODE: authenticated
+      PAPERCLIP_DEPLOYMENT_EXPOSURE: public
+      PAPERCLIP_MIGRATION_AUTO_APPLY: "true"
+      
+      # Server
+      PORT: 3100
+      HOST: 0.0.0.0
+      SERVE_UI: "true"
+      
+      # Node
+      NODE_ENV: production
+    volumes:
+      - paperclip_data:/paperclip
+
+volumes:
+  postgres_data:
+    driver: local
+  paperclip_data:
+    driver: local

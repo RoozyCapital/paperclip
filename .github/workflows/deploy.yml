@@ -153,26 +153,100 @@ jobs:
 
             echo "Starting deployment sequence..."
 
+            # Create deployment directory if not exists
+            mkdir -p /opt/paperclip
+            cd /opt/paperclip
+
             # Pull the latest canary image
             docker pull ghcr.io/${{ github.repository }}:canary
 
-            # Stop and remove the existing container if it exists
-            docker stop paperclip || true
-            docker rm paperclip || true
+            # Copy docker-compose file from repo if not exists, or update it
+            if [ ! -f docker-compose.production.yml ]; then
+              # First time setup - create docker-compose file
+              cat > docker-compose.production.yml << 'COMPOSE_EOF'
+version: "3.8"
 
-            # Load environment variables on the VPS host (e.g., if DATABASE_URL is defined in profiles)
-            [ -f ~/.profile ] && . ~/.profile || true
-            [ -f /etc/profile ] && . /etc/profile || true
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: paperclip-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: paperclip
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: paperclip
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paperclip"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-            # Run the new container with DB configuration and auto-migration
-            docker run -d \
-              --name paperclip \
-              --restart unless-stopped \
-              -p 3100:3100 \
-              -e DATABASE_URL="$DATABASE_URL" \
-              -e PAPERCLIP_MIGRATION_AUTO_APPLY="true" \
-              -v paperclip-data:/paperclip \
-              ghcr.io/${{ github.repository }}:canary
+  paperclip:
+    image: ghcr.io/${{ github.repository }}:canary
+    container_name: paperclip-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3100:3100"
+    environment:
+      DATABASE_URL: postgres://paperclip:${POSTGRES_PASSWORD}@postgres:5432/paperclip
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: http://${VPS_IP}:3100
+      PAPERCLIP_AUTH_PUBLIC_BASE_URL: http://${VPS_IP}:3100
+      PAPERCLIP_DEPLOYMENT_MODE: authenticated
+      PAPERCLIP_DEPLOYMENT_EXPOSURE: public
+      PAPERCLIP_MIGRATION_AUTO_APPLY: "true"
+      PORT: 3100
+      HOST: 0.0.0.0
+      SERVE_UI: "true"
+    volumes:
+      - paperclip_data:/paperclip
+
+volumes:
+  postgres_data:
+    driver: local
+  paperclip_data:
+    driver: local
+COMPOSE_EOF
+            fi
+
+            # Generate secrets if .env doesn't exist
+            if [ ! -f .env ]; then
+              POSTGRES_PASSWORD=$(openssl rand -base64 24)
+              BETTER_AUTH_SECRET=$(openssl rand -base64 32)
+              VPS_IP=$(curl -s ifconfig.me)
+              
+              cat > .env << ENV_EOF
+POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET
+VPS_IP=$VPS_IP
+ENV_EOF
+              
+              echo "Created new .env file with generated secrets"
+            fi
+
+            # Source .env file
+            set -a
+            source .env
+            set +a
+
+            # Stop and remove existing containers
+            docker compose -f docker-compose.production.yml down || true
+
+            # Pull latest images and start services
+            docker compose -f docker-compose.production.yml pull
+            docker compose -f docker-compose.production.yml up -d
 
             echo "Deployment completed successfully! Checking container status..."
-            docker ps -f name=paperclip
+            docker compose -f docker-compose.production.yml ps
+            
+            # Show access URL
+            VPS_IP=$(curl -s ifconfig.me)
+            echo ""
+            echo "✅ Paperclip deployed at: http://$VPS_IP:3100"
