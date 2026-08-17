@@ -23,6 +23,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Lowercase repository name
+        id: repo-name
+        run: |
+          echo "repo=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
       - name: Compute build version
         id: build-version
         run: |
@@ -111,7 +116,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ghcr.io/${{ steps.repo-name.outputs.repo }}
           tags: |
             type=raw,value=canary,enable=${{ github.ref == 'refs/heads/master' }}
             type=sha
@@ -130,8 +135,8 @@ jobs:
             CLI_TOOLS_CACHE_EPOCH=${{ steps.tools-epoch.outputs.epoch }}
           platforms: linux/amd64,linux/arm64
           push: true
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache,mode=max
+          cache-from: type=registry,ref=ghcr.io/${{ steps.repo-name.outputs.repo }}:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ steps.repo-name.outputs.repo }}:buildcache,mode=max
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
@@ -142,6 +147,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+
+      - name: Lowercase repository name
+        id: repo-name
+        run: |
+          echo "repo=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
       - name: Copy docker-compose to VPS
         uses: appleboy/scp-action@v0.1.7
@@ -171,7 +181,7 @@ jobs:
             cd /opt/paperclip
 
             # Pull the latest canary image
-            docker pull ghcr.io/${{ github.repository }}:canary
+            docker pull ghcr.io/${{ steps.repo-name.outputs.repo }}:canary
 
             # Generate secrets if .env doesn't exist
             if [ ! -f .env ]; then
@@ -182,13 +192,13 @@ jobs:
               echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" > .env
               echo "BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET" >> .env
               echo "VPS_IP=$VPS_IP" >> .env
-              echo "GITHUB_REPO=${{ github.repository }}" >> .env
+              echo "GITHUB_REPO=${{ steps.repo-name.outputs.repo }}" >> .env
               
               echo "Created new .env file with generated secrets"
             else
               # If .env exists, ensure GITHUB_REPO is set correctly
               if ! grep -q "^GITHUB_REPO=" .env; then
-                echo "GITHUB_REPO=${{ github.repository }}" >> .env
+                echo "GITHUB_REPO=${{ steps.repo-name.outputs.repo }}" >> .env
               fi
             fi
 
