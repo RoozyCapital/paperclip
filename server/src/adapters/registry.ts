@@ -112,6 +112,15 @@ import {
   modelProfiles as openCodeModelProfiles,
 } from "@paperclipai/adapter-opencode-local";
 import {
+  execute as openCodeZenExecute,
+  testEnvironment as openCodeZenTestEnvironment,
+  sessionCodec as openCodeZenSessionCodec,
+} from "@paperclipai/adapter-opencode-zen/server";
+import {
+  agentConfigurationDoc as openCodeZenAgentConfigurationDoc,
+  models as openCodeZenModels,
+} from "@paperclipai/adapter-opencode-zen";
+import {
   execute as openclawGatewayExecute,
   testEnvironment as openclawGatewayTestEnvironment,
 } from "@paperclipai/adapter-openclaw-gateway/server";
@@ -435,6 +444,21 @@ const openCodeLocalAdapter: ServerAdapterModule = {
   agentConfigurationDoc: openCodeAgentConfigurationDoc,
 };
 
+const openCodeZenAdapter: ServerAdapterModule = {
+  type: "opencode_zen",
+  execute: openCodeZenExecute,
+  testEnvironment: openCodeZenTestEnvironment,
+  sessionCodec: openCodeZenSessionCodec,
+  models: openCodeZenModels,
+  sessionManagement: getAdapterSessionManagement("opencode_zen") ?? undefined,
+  supportsLocalAgentJwt: true,
+  supportsInstructionsBundle: true,
+  instructionsPathKey: "instructionsFilePath",
+  requiresMaterializedRuntimeSkills: true,
+  getRuntimeCommandSpec: (config) => buildNpmRuntimeCommandSpec(config, "opencode", "opencode-ai"),
+  agentConfigurationDoc: openCodeZenAgentConfigurationDoc,
+};
+
 const piLocalAdapter: ServerAdapterModule = {
   type: "pi_local",
   execute: piExecute,
@@ -473,6 +497,7 @@ function registerBuiltInAdapters() {
     claudeLocalAdapter,
     codexLocalAdapter,
     openCodeLocalAdapter,
+    openCodeZenAdapter,
     piLocalAdapter,
     cursorCloudAdapter,
     cursorLocalAdapter,

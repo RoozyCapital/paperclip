@@ -79,6 +79,9 @@ importers:
       '@paperclipai/adapter-opencode-local':
         specifier: workspace:*
         version: link:../packages/adapters/opencode-local
+      '@paperclipai/adapter-opencode-zen':
+        specifier: workspace:*
+        version: link:../packages/adapters/opencode-zen
       '@paperclipai/adapter-pi-local':
         specifier: workspace:*
         version: link:../packages/adapters/pi-local
@@ -325,6 +328,22 @@ importers:
       picocolors:
         specifier: ^1.1.1
         version: 1.1.1
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.1
+        version: 22.20.1
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+
+  packages/adapters/opencode-zen:
+    dependencies:
+      '@paperclipai/adapter-opencode-local':
+        specifier: workspace:*
+        version: link:../opencode-local
+      '@paperclipai/adapter-utils':
+        specifier: workspace:*
+        version: link:../../adapter-utils
     devDependencies:
       '@types/node':
         specifier: ^22.20.1
@@ -786,6 +805,9 @@ importers:
       '@paperclipai/adapter-opencode-local':
         specifier: workspace:*
         version: link:../packages/adapters/opencode-local
+      '@paperclipai/adapter-opencode-zen':
+        specifier: workspace:*
+        version: link:../packages/adapters/opencode-zen
       '@paperclipai/adapter-pi-local':
         specifier: workspace:*
         version: link:../packages/adapters/pi-local
@@ -961,6 +983,9 @@ importers:
       '@paperclipai/adapter-opencode-local':
         specifier: workspace:*
         version: link:../packages/adapters/opencode-local
+      '@paperclipai/adapter-opencode-zen':
+        specifier: workspace:*
+        version: link:../packages/adapters/opencode-zen
       '@paperclipai/adapter-pi-local':
         specifier: workspace:*
         version: link:../packages/adapters/pi-local

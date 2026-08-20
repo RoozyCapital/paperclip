@@ -9,6 +9,7 @@ import { grokLocalUIAdapter } from "./grok-local";
 import { hermesGatewayUIAdapter } from "./hermes-gateway";
 import { hermesLocalUIAdapter } from "./hermes-local";
 import { openCodeLocalUIAdapter } from "./opencode-local";
+import { openCodeZenUIAdapter } from "./opencode-zen";
 import { piLocalUIAdapter } from "./pi-local";
 import { openClawGatewayUIAdapter } from "./openclaw-gateway";
 import { processUIAdapter } from "./process";
@@ -62,6 +63,7 @@ function registerBuiltInUIAdapters() {
     hermesGatewayUIAdapter,
     hermesLocalUIAdapter,
     openCodeLocalUIAdapter,
+    openCodeZenUIAdapter,
     piLocalUIAdapter,
     cursorLocalUIAdapter,
     openClawGatewayUIAdapter,
